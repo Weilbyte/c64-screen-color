@@ -68,6 +68,9 @@
                 col.setAttribute('col', ic+1);
                 col.setAttribute('id', getAddress(ir+1, ic+1))
                 col.setAttribute('id-color', getAddressColor(ir+1, ic+1))
+                if ((ic == 20 || ic == 19) && ir == 12) {
+                    col.innerText = 'C'
+                }
                 row.appendChild(col);
             }
             row.setAttribute('row', ir+1);
