@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>C64 Screen</title>
+</head>
+<body>
+    <div id='cont'>
+        <table id='table'>
+        </table>
+        <div style="margin-left: 40px; margin-top: 40px;">
+            <b>Address</b> <span id='data-addr'></span>
+            <br/>
+            <b>Color Address</b> <span id='data-addr-color'></span>
+            <br/><br/><br/>
+            <b>Color</b> <span id='data-color'>None</span>
+            <br/>
+            <button  onClick="changeColor(this)"  class="btn-color" style="background-color: #000; color: #fff;">0</button>
+            <button  onClick="changeColor(this)"  class="btn-color" style="background-color: #fff; color: #000;">1</button>
+            <button  onClick="changeColor(this)"  class="btn-color" style="background-color: #800; color: #fff;">2</button>
+            <button  onClick="changeColor(this)"  class="btn-color" style="background-color: #afe; color: #000;">3</button>
+            <br/>
+            <button  onClick="changeColor(this)"  class="btn-color" style="background-color: #c4c; color: #fff;">4</button>
+            <button  onClick="changeColor(this)"  class="btn-color" style="background-color: #0c5; color: #000;">5</button>
+            <button  onClick="changeColor(this)"  class="btn-color" style="background-color: #00a; color: #fff;">6</button>
+            <button  onClick="changeColor(this)"  class="btn-color" style="background-color: #ee7; color: #000;">7</button>
+            <br/>
+            <button  onClick="changeColor(this)"  class="btn-color" style="background-color: #d85; color: #000;">8</button>
+            <button  onClick="changeColor(this)"  class="btn-color" style="background-color: #640; color: #fff;">9</button>
+            <button  onClick="changeColor(this)"  class="btn-color" style="background-color: #f77; color: #000;">A</button>
+            <button  onClick="changeColor(this)"  class="btn-color" style="background-color: #333; color: #fff;">B</button>
+            <br/>
+            <button  onClick="changeColor(this)"  class="btn-color" style="background-color: #777; color: #fff;">C</button>
+            <button  onClick="changeColor(this)"  class="btn-color" style="background-color: #af6; color: #000;">D</button>
+            <button  onClick="changeColor(this)"  class="btn-color" style="background-color: #08f; color: #000;">E</button>
+            <button  onClick="changeColor(this)"  class="btn-color" style="background-color: #bbb; color: #000;">F</button>
+            <br/>
+            <button  onClick="changeColor(this)"  class="btn-color">/</button>
+            <br/><br/><br/>
+            <button onClick="exportACME()">Export to clipboard</button>
+            <br/><br/>
+            Only color supported for now.
+            <br/>
+            Exported characters are reverse spaces.
+            <br/><br/>
+            <a href="https://github.com/Weilbyte/c64-screen-color">GitHub Repository</a>
+        </div>
+    </div>
+</body>
+<script>
+    const SCREENRAM_START_DECIMAL = 1023;
+    const COLORRAM_START_DECIMAL = 55295;
+    let SCREEN_COLOR = '#7155d8';
+    let SCREEN_COLOR_CODE = '/';
+
+    let exportArrayColor = {}
+    let exportArrayChar = {}
+    let exportCode = '';
+    window.onload = () => {
+        const table = document.getElementById('table');
+
+        for (let ir = 0; ir < 25; ir++) {
+            let row = document.createElement('tr');
+            for (let ic = 0; ic < 40; ic++) {
+                let col = document.createElement('th')
+                col.setAttribute('col', ic+1);
+                col.setAttribute('id', getAddress(ir+1, ic+1))
+                col.setAttribute('id-color', getAddressColor(ir+1, ic+1))
+                row.appendChild(col);
+            }
+            row.setAttribute('row', ir+1);
+            table.appendChild(row)
+        }
+    }
+
+    const changeColor = (e) => {
+        SCREEN_COLOR = e.style.backgroundColor;
+        SCREEN_COLOR_CODE = e.innerText;
+        document.getElementById('data-color').innerText = SCREEN_COLOR_CODE;
+
+        if (SCREEN_COLOR_CODE == '/') {
+            SCREEN_COLOR = '#7155d8'
+            document.getElementById('data-color').innerText = 'None';
+        }
+        
+    }
+
+    const getAddress = (row, col) => {
+        row = parseInt(row)
+        col = parseInt(col)
+        return SCREENRAM_START_DECIMAL + ((row -1) * 40) + col;
+    }
+
+    const getAddressColor = (row, col) => {
+        row = parseInt(row)
+        col = parseInt(col)
+        return COLORRAM_START_DECIMAL + ((row -1) * 40) + col;
+    }
+
+    const toHex = (addr) => {
+        return addr.toString(16).padStart(4, '0')
+    }
+
+    window.onclick = (e) => {
+        let col = e.path[0]
+        let colNum = col.getAttribute('col')
+        if (!colNum) return;
+
+        let addr = col.getAttribute('id')
+        let addrHex = toHex(parseInt(addr))
+        let addrColor = col.getAttribute('id-color')
+        let addrHexColor = toHex(parseInt(addrColor))
+
+        document.getElementById('data-addr').innerText = `$${addrHex} (${addr})`;
+        document.getElementById('data-addr-color').innerText = `$${addrHexColor} (${addrColor})`;
+
+        col.style.backgroundColor = SCREEN_COLOR;
+        if (SCREEN_COLOR_CODE == '/') {
+            col.removeAttribute('data-color')
+        } else {
+            col.setAttribute('data-color', SCREEN_COLOR_CODE);
+        }
+        
+    }
+
+    const exportACME = () => {
+        exportACMEColor();
+        exportACMEChar();
+        navigator.clipboard.writeText(exportCode);
+        console.log(exportCode)
+        alert('Copied to clipboard!');
+
+        exportArrayColor = {}
+        exportArrayChar = {}
+        exportCode = ''
+    }
+
+    const exportACMEColor = () => {
+        exportCode += '\n; Color instructions';
+        for (var ia = 1024; ia <= 2023; ia++) {
+            let cell = document.getElementById(ia);
+            let color = cell.getAttribute('data-color');
+            if (!color) continue;
+            if (!exportArrayColor[color]) exportArrayColor[color] = [];
+            exportArrayColor[color].push(toHex(parseInt(cell.getAttribute('id-color'))));
+        }
+        for (var color in exportArrayColor) {
+            exportCode += `\nlda #$${color}`;
+            for (let ic = 0; ic < exportArrayColor[color].length; ic++) {
+                let addr = exportArrayColor[color][ic];
+                exportCode += `\nsta $${addr}`
+            }
+        }
+    }
+
+    const exportACMEChar = () => {
+        exportCode += '\n; Char instructions';
+        for (var ia = 1024; ia <= 2023; ia++) {
+            let cell = document.getElementById(ia);
+            let color = cell.getAttribute('data-color');
+            if (!color) continue;
+            let char = 'A0' // Space, reverse
+            if (!exportArrayChar[char]) exportArrayChar[char] = [];
+            exportArrayChar[char].push(toHex(ia));
+        }
+        for (var char in exportArrayChar) {
+            exportCode += `\nlda #$${char}`;
+            for (let ic = 0; ic < exportArrayChar[char].length; ic++) {
+                let addr = exportArrayChar[char][ic];
+                exportCode += `\nsta $${addr}`
+            }
+        }
+    }
+</script>
+<style>
+    table {
+        border-spacing: 1px;
+        background-color: black;
+        border: 40px solid #8a79ca;
+        border-top: 80px solid #8a79ca;
+        border-bottom: 80px solid #8a79ca;
+    }
+
+    tr {
+        background-color: #7155d8;
+    }
+
+    th {
+        width: 15px;
+        height: 15px;
+    }
+
+    #cont {
+        display: flex;
+        flex-direction: row;
+    }
+
+    .btn-color {
+        border: 1px solid black;
+        margin-top: 2px;
+        width: 25px;
+        height: 25px;
+    }
+</style>
+</html>
